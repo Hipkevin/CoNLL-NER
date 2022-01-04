@@ -1,0 +1,3 @@
+chmod 755 gpu
+chmod 755 run
+pip install -r requirements.txt

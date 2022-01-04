@@ -36,6 +36,13 @@
     In such a way, encoder extracts the context and linguistit features,
     which will be received by tagger to output BIO tags.
 
+### Usage
+    chmod 755 deploy
+    ./deploy
+
+    ./gpu n  # monitor the GPU (refresh every n seconds)
+    ./run  # start
+
 ## Baseline Performance
 | Model | Accuracy | Precision | Recall | F1 |
 | :---: | :---: | :---: | :---: | :---: |
