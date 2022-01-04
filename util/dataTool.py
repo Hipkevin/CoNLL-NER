@@ -1,8 +1,9 @@
 import torch
 
 from torch.utils.data import Dataset
-from transformers import BertTokenizer
 from tqdm import tqdm
+
+from config import config
 
 
 def getData(path):
@@ -33,8 +34,6 @@ class NERDataset(Dataset):
     def __init__(self, path, config):
         text, labels = getData(path)
 
-        tokenizer = BertTokenizer.from_pretrained(config.bert_name, cache_dir=config.bert_path)
-
         X, Y = list(), list()
         for i in tqdm(range(len(text))):
             sentence, label = text[i], labels[i]
@@ -49,7 +48,7 @@ class NERDataset(Dataset):
                 sentence = sentence[0: config.pad_size]
                 tag = tag[0: config.pad_size]
 
-            token = tokenizer.encode(sentence, add_special_tokens=False)
+            token = config.tokenizer.encode(sentence, add_special_tokens=False)
 
             X.append(token)
             Y.append(tag)
