@@ -43,6 +43,7 @@ class BertModelEncoder(Encoder):
 
         return x
 
+# TODO: adjust the lstm and softmax structure (refactor the trainer)
 class BiLSTMEncoder(Encoder):
     def __init__(self, config):
         super(BiLSTMEncoder, self).__init__()
