@@ -12,20 +12,30 @@ def train(model, train_loader, val_loader, optimizer, config):
 
             out, _ = model(x)
 
-            tagger_loss, predict_loss = model.tagger.loss_func(out, y)
-            loss = tagger_loss + predict_loss
+            if "CRF" in str(type(model.tagger)):
+                tagger_loss, predict_loss = model.tagger.loss_func(out, y)
+                loss = tagger_loss + predict_loss
+            else:
+                loss = model.tagger.loss_func(out, y)
 
             optimizer.zero_grad()
             loss.backward()
             optimizer.step()
 
+            # validation
             if idx % 10 == 0:
+                val_f1 = 0
                 for i, data in enumerate(val_loader):
                     val_text, val_y = data[0].to(config.device), data[1]
                     _, tag = model(val_text)
-                    val_f1 = evaluate(val_y, tag)
-                print(f'epoch: {epoch + 1} batch: {idx} '
-                      f'| tagger_loss: {tagger_loss} predict_loss: {predict_loss} | val_f1: {val_f1}')
+                    val_f1 += evaluate(val_y, tag)
+
+                val_f1 /= len(val_loader)
+                if "CRF" in str(type(model.tagger)):
+                    print(f'epoch: {epoch + 1} batch: {idx} '
+                          f'| tagger_loss: {tagger_loss} predict_loss: {predict_loss} | val_macro_f1: {val_f1}')
+                else:
+                    print(f'epoch: {epoch + 1} batch: {idx} | loss: {loss} | val_macro_f1: {val_f1}')
 
     return model
 

@@ -1,19 +1,34 @@
+import abc
+
 import torch
 import torch.nn as nn
 
 from transformers import BertModel
 from torchcrf import CRF
 
+from typing import List
+
 """
-Abstract Class (without abc)
+Interface ==> Encoder
+
+Abstract Class ==> Tagger
+loss_func must be implemented
+
+NERModel combines the two classes
+out --> features extracted by encoder
+tag --> decoded by tagger (CRF -- > viterbi | Softmax --> argmax) 
 """
 class Encoder(nn.Module):
     def __init__(self):
         super(Encoder, self).__init__()
 
-class Tagger(nn.Module):
+class Tagger(abc.ABC, nn.Module):
     def __init__(self):
         super(Tagger, self).__init__()
+
+    @abc.abstractmethod
+    def loss_func(self, out, y):
+        pass
 
 class NERModel(nn.Module):
     def __init__(self, encoder: Encoder, tagger: Tagger):
@@ -29,21 +44,22 @@ class NERModel(nn.Module):
 
 
 """
-Sub-Class
+Sub-Class implement the abstract interface
 """
 class BertModelEncoder(Encoder):
     def __init__(self, config):
         super(BertModelEncoder, self).__init__()
         self.bert = BertModel.from_pretrained(config.bert_name, cache_dir=config.bert_path)
         self.fc = nn.Linear(config.tagger_input, config.label_size)
+        self.dropout = nn.Dropout(config.dropout)
 
     def forward(self, x):
         x = self.bert(x)[0]
         x = self.fc(x)
+        x = self.dropout(x)
 
         return x
 
-# TODO: adjust the lstm and softmax structure (refactor the trainer)
 class BiLSTMEncoder(Encoder):
     def __init__(self, config):
         super(BiLSTMEncoder, self).__init__()
@@ -54,18 +70,46 @@ class BiLSTMEncoder(Encoder):
                             bidirectional=True,
                             batch_first=True)
         self.fc = nn.Linear(config.tagger_input, config.label_size)
+        self.dropout = nn.Dropout(config.dropout)
 
     def forward(self, x):
-        return self.fc(self.lstm(x))
+        out, _ = self.lstm(x)
+        return self.dropout(self.fc(out))
+
+class BertBiLSTMEncoder(Encoder):
+    def __init__(self, config):
+        super(BertBiLSTMEncoder, self).__init__()
+        self.bert_encoder = BertModel.from_pretrained(config.bert_name, cache_dir=config.bert_path)
+        self.lstm_encoder = BiLSTMEncoder(config)
+
+    def forward(self, x):
+        return self.lstm_encoder(self.bert_encoder(x)[0])
 
 class SoftmaxTagger(Tagger):
-    def __init__(self):
+    def __init__(self, config):
         super(SoftmaxTagger, self).__init__()
+
+        self.tag_num = config.label_size
+        self.device = config.device
 
         self.softmax = nn.Softmax(dim=-1)
 
-    def forward(self, x):
-        return torch.argmax(self.softmax(x), dim=0)
+    def forward(self, x) -> List[List[int]]:
+        tag = torch.argmax(self.softmax(x), dim=-1)
+        return tag.tolist()
+
+    def loss_func(self, out, y):
+        weight = torch.tensor([1] * self.tag_num, dtype=torch.float32).to(self.device)
+        # weight[:] = 0.9
+        # weight[-1] = 0.08
+
+        criterion = nn.CrossEntropyLoss(weight=weight)
+
+        predict_loss = torch.tensor(0, dtype=torch.float32).to(self.device)
+        for Y_hat, Y in zip(out, y):
+            predict_loss += criterion(Y_hat, Y)
+
+        return predict_loss
 
 class CRFTagger(Tagger):
     def __init__(self, config):
@@ -80,8 +124,12 @@ class CRFTagger(Tagger):
 
     def loss_func(self, out, y):
         weight = torch.tensor([1] * self.tag_num, dtype=torch.float32).to(self.device)
-        # weight[0] = 0.08
-        # weight[1:] = 0.9
+
+        # cost sensitive learning
+        # change the weights of few samples' cost
+
+        # weight[:] = 0.9
+        # weight[-1] = 0.08
 
         criterion = nn.CrossEntropyLoss(weight=weight)
 

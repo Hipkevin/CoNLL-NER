@@ -3,10 +3,13 @@ import torch
 from torch.utils.data import Dataset
 from tqdm import tqdm
 
-from config import config
-
 
 def getData(path):
+    """
+    get source data
+    :param path: data file path
+    :return: text content and label (List[str])
+    """
     with open(path, 'r', encoding='utf8') as file:
         data_text = file.readlines()
 
@@ -41,6 +44,7 @@ class NERDataset(Dataset):
             sentence_length = len(sentence)
             tag = [config.label2idx[l] for l in label]
 
+            # padding
             if sentence_length < config.pad_size:
                 sentence.extend(['[PAD]'] * (config.pad_size - sentence_length))
                 tag.extend([config.label2idx['O']] * (config.pad_size - sentence_length))

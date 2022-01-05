@@ -43,12 +43,17 @@
     ./gpu n  # monitor the GPU (refresh every n seconds)
     ./run  # start
 
-## Baseline Performance
-| Model | Accuracy | Precision | Recall | F1 |
-| :---: | :---: | :---: | :---: | :---: |
-| Bert-softmax | - | - | - | - |
-| Bert-CRF | - | - | - | - |
-| Bert-BiLSTM-softmax | - | - | - | - |
-| Bert-BiLSTM-CRF | - | - | - | - |
+## Baseline Performance (1 ep | macro)
+| Model | Precision | Recall | F1 |
+| :---: | :---: | :---: | :---: |
+| Bert-CRF | 0.71 | 0.68 | 0.69 |
+| Bert-softmax | - | - | - |
+| Bert-BiLSTM-CRF | - | - | - |
+| Bert-BiLSTM-softmax | - | - | - |
 
-## Conclusion
+## Optimization
+- cost sensitive learning or drop the few classes
+- dropout to improve the generalization performance
+- different backbone structures
+- DDP training --> large GPU caches for a large batch_size
+- more epochs --> schedule the learning rate dynamically while training
