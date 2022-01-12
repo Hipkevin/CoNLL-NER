@@ -6,12 +6,17 @@ def train(model, train_loader, val_loader, optimizer, config):
     model.train()
     for epoch in range(config.epoch_size):
 
+        # 每个epoch遍历所有数据
         for idx, data in enumerate(train_loader):
 
+            # 加载数据集至指定设备
             x, y = data[0].to(config.device), data[1].to(config.device)
 
             out, _ = model(x)
 
+            # 使用CRF时，计算CRF层的loss
+            # tagger_loss与predict_loss相加后得到loss，
+            # 求偏导之后分别对tagger和encoder进行反向传播优化
             if "CRF" in str(type(model.tagger)):
                 tagger_loss, predict_loss = model.tagger.loss_func(out, y)
                 loss = tagger_loss + predict_loss

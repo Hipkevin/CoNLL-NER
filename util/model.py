@@ -6,7 +6,7 @@ import torch.nn as nn
 from transformers import BertModel
 from torchcrf import CRF
 
-from typing import List
+from typing import List, Tuple
 
 """
 Interface ==> Encoder
@@ -37,7 +37,7 @@ class NERModel(nn.Module):
         self.encoder = encoder
         self.tagger = tagger
 
-    def forward(self, x):
+    def forward(self, x) -> Tuple[torch.Tensor, List[List[int]]]:
         out = self.encoder(x)
 
         return out, self.tagger(out)
@@ -54,6 +54,7 @@ class BertModelEncoder(Encoder):
         self.dropout = nn.Dropout(config.dropout)
 
     def forward(self, x):
+        # 取bert最后一个隐藏层的输出
         x = self.bert(x)[0]
         x = self.fc(x)
         x = self.dropout(x)
@@ -100,6 +101,7 @@ class SoftmaxTagger(Tagger):
 
     def loss_func(self, out, y):
         weight = torch.tensor([1] * self.tag_num, dtype=torch.float32).to(self.device)
+        # 代价敏感，可以调整少数类标签带来的损失
         # weight[:] = 0.9
         # weight[-1] = 0.08
 
